@@ -1,12 +1,39 @@
 import path from 'path'
 import { Plugin } from 'vite'
-import { parse } from '@vue/compiler-sfc'
-import detective from 'detective-less'
+import vtc from 'vue-template-compiler'
+
+/** 参考 npm package: detective-less */
+import Walker from 'node-source-walk'
+import gonzales from 'gonzales-pe'
 
 export function styleImport(opts: {
   alias: Record<string, string | ((args: Record<string, any>) => string)>,
 }): Plugin {
   const { alias } = opts
+  const walker = new Walker as any
+  const isImportStatement = (node) => {
+    if (node.type !== 'atrule') { return false }
+    if (!node.content.length || node.content[0].type !== 'atkeyword') { return false }
+
+    const atKeyword = node.content[0]
+
+    if (!atKeyword.content.length) { return false }
+
+    const importKeyword = atKeyword.content[0]
+
+    if (importKeyword.type !== 'ident' || importKeyword.content !== 'import') { return false }
+
+    return true
+  }
+  const extractDependencies = (importStatementNode) => {
+    return importStatementNode.content
+      .filter(function (innerNode) {
+        return innerNode.type === 'string' || innerNode.type === 'ident'
+      })
+      .map(function (identifierNode) {
+        return identifierNode.content.replace(/["']/g, '')
+      })
+  }
 
   return {
     enforce: 'pre',
@@ -17,22 +44,30 @@ export function styleImport(opts: {
       let _code = code
 
       try {
-        const pathDict = parse(code).descriptor.styles.reduce((dict, cur) => {
-          for (const importPath of detective(cur.content)) {
-            if (importPath.startsWith('~')) {
-              const node_modules = path.join(process.cwd(), 'node_modules')
-              dict[importPath] = path.join(
-                path.relative(path.parse(id).dir, node_modules),
-                importPath.slice(1),
-              )
-            }
-          }
-          return dict
-        }, {} as Record<string, string>)
+        const imports = vtc.parseComponent(code).styles.reduce((dependencies, cur) => {
+          const ast = (gonzales as any).parse(cur.content, { syntax: cur.lang })
+          let deps = dependencies
 
-        for (const [originPath, targetPath] of Object.entries(pathDict)) {
-          // Replace alias '~' to 'node_modules'
-          _code = _code.replace(originPath, targetPath)
+          walker.walk(ast, (node: any) => {
+            if (!isImportStatement(node)) return
+
+            deps = deps.concat(extractDependencies(node))
+          })
+
+          return deps
+        }, [])
+
+        for (const importPath of imports) {
+          if (importPath.startsWith('~')) {
+            const node_modules = path.join(process.cwd(), 'node_modules')
+            const targetPath = path.join(
+              path.relative(path.parse(id).dir, node_modules),
+              importPath.slice(1),
+            )
+
+            // Replace alias '~' to 'node_modules'
+            _code = _code.replace(importPath, targetPath)
+          }
         }
 
         return _code

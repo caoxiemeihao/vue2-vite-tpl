@@ -7,14 +7,11 @@ import {
   symlinkIndexHtml,
   styleImport,
 } from './vite-plugins'
+import { testPlugin } from './vite-plugins/test-plugin'
 
 export default defineConfig({
   plugins: [
-    createVuePlugin({
-      vueTemplateOptions: {
-        // compiler: {},
-      },
-    }),
+    createVuePlugin({}),
     // Coyp ’public/index.html‘ to root directory
     symlinkIndexHtml({
       template: path.join(__dirname, 'public/index.html'),
@@ -33,6 +30,7 @@ export default defineConfig({
         '~': path.join(__dirname, 'node_modules'),
       },
     }),
+    testPlugin(),
   ],
   resolve: {
     alias: {
