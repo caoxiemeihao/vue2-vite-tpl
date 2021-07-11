@@ -1,0 +1,142 @@
+@import './boot4-part.less';
+
+body {
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  font-family: Helvetica Neue, Helvetica, PingFang SC, Hiragino Sans GB, Microsoft YaHei, Arial, sans-serif;
+}
+
+html {
+  box-sizing: border-box;
+}
+
+body,
+html,
+#app,
+.app-wrapper,
+.main-container {
+  min-height: 100vh;
+}
+
+.el-notification.right {
+  z-index: 5000 !important;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: inherit;
+}
+
+*:focus,
+*:active {
+  outline: none;
+}
+
+a,
+a:focus,
+a:hover {
+  cursor: pointer;
+  color: inherit;
+  text-decoration: none;
+}
+
+.clearfix {
+  &::after {
+    visibility: hidden;
+    display: block;
+    font-size: 0;
+    content: " ";
+    clear: both;
+    height: 0;
+  }
+}
+
+//vue router transition css
+.fade-enter-active,
+.fade-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-enter,
+.fade-leave-active {
+  opacity: 0;
+}
+
+//main-container全局样式
+.app-main {
+  display: flex;
+  flex: 1;
+  overflow: auto;
+}
+
+.app-container {
+  padding: 20px;
+}
+
+.el-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.parameter-container {
+  width: 100%;
+}
+
+.form-section {
+  background-color: #fff;
+  padding: 15px;
+  margin-bottom: 10px;
+
+  .section-title {
+    font-weight: 500;
+    line-height: 36px;
+    margin-bottom: 10px;
+  }
+}
+
+._dialog {
+  .el-dialog__header {
+    border-bottom: 1px solid #eee;
+
+    .el-dialog__title {
+      font-size: 16px;
+    }
+  }
+
+  .el-dialog__footer {
+    border-top: 1px solid #eee;
+    padding: 10px 20px;
+  }
+}
+
+.link {
+  color: #409eff;
+}
+
+.custom-parameter-wrapper .layout-container {
+  height: 65px !important;
+  position: relative;
+}
+
+.detail-page__div--feature {
+  display: flex;
+  align-items: center;
+}
+
+.billAmount-border-right {
+  border-right: 1px solid #a3a4a7 !important;
+}
+
+.main-table {
+  th {
+    color: rgba(0, 0, 0, 0.85);
+    font-size: 14px;
+  }
+}

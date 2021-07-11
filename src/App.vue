@@ -16,7 +16,11 @@ export default {
 }
 </script>
 
-<style>
+<style lang="less">
+// @import '../node_modules/normalize.css/normalize.css';
+@import '~normalize.css/normalize.css';
+@import './assets/index.less';
+
 #app {
   font-family: Avenir, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
