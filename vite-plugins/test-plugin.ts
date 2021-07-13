@@ -36,37 +36,45 @@ export function testPlugin(): Plugin {
     name: '草鞋没号:testPlugin',
     enforce: 'pre',
     transform(code, id) {
+      let _code = code
 
-      /* test style import
-      if (id.endsWith('App.vue')) {
-        try {
-          console.log('****')
+      
 
-          const result = vtc.parseComponent(code)
-
-          const imports = result.styles.reduce((dependencies, cur) => {
-            const ast = (gonzales as any).parse(cur.content, { syntax: cur.lang })
-            let deps = dependencies
-
-            walker.walk(ast, (node: any) => {
-              if (!isImportStatement(node)) return
-
-              deps = deps.concat(extractDependencies(node))
-            })
-
-            return deps
-          }, [])
-
-          console.log(imports)
-
-        } catch (error) {
-          console.log(error)
-        }
-        console.log('----')
-      }
-      */
-
-      return code
+      return _code
     },
   }
 }
+
+/* test style import
+transform(code, id) {
+
+  if (id.endsWith('App.vue')) {
+    try {
+      console.log('****')
+
+      const result = vtc.parseComponent(code)
+
+      const imports = result.styles.reduce((dependencies, cur) => {
+        const ast = (gonzales as any).parse(cur.content, { syntax: cur.lang })
+        let deps = dependencies
+
+        walker.walk(ast, (node: any) => {
+          if (!isImportStatement(node)) return
+
+          deps = deps.concat(extractDependencies(node))
+        })
+
+        return deps
+      }, [])
+
+      console.log(imports)
+
+    } catch (error) {
+      console.log(error)
+    }
+    console.log('----')
+  }
+  
+  return code
+},
+*/

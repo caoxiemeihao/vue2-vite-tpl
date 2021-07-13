@@ -1,0 +1,91 @@
+import path from 'path'
+import fs from 'fs'
+import { Plugin } from 'vite'
+import { parse } from 'cjs-module-lexer'
+import walk from 'acorn-walk'
+import vtc from 'vue-template-compiler'
+
+export function commonjs(options: Record<string, unknown>): Plugin {
+
+  const parseQuery = (querystring: string): Record<string, string | boolean> => {
+
+    // { vue: true, type: 'template', 'lang.js': true }
+    // { vue: true, type: 'style', index: '0', 'lang.less': true }
+    // { vue: true, type: 'style', index: '0', scoped: 'true', 'lang.css': tru }
+
+    const [, query] = querystring.split('?')
+    try {
+      return [...new URLSearchParams(query).entries()].reduce((acc, [k, v]) => (
+        { ...acc, [k]: v === '' ? true : v }
+      ), {})
+    } catch (error) {
+      return {
+        _error: error,
+      }
+    }
+  }
+
+  return {
+    name: '草鞋没号:commonjs',
+    enforce: 'pre',
+    transform(code, id) {
+      if (!['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs'].some(ext => id.endsWith(ext))) return
+      if (parseQuery(id).type === 'template') return
+
+      try {
+        let _code = code
+
+        if (id.endsWith('.vue')) {
+          const component = vtc.parseComponent(_code)
+          _code = component.script.content
+        }
+
+        const ast = this.parse(_code, {
+          ecmaVersion: 2020,
+          allowImportExportEverywhere: true,
+        })
+
+        /** There are tow types of node */
+        // 2. require('path').default
+        const requireMemberNodes: acorn.Node[] = []
+        // 1. require('path')
+        const requireCallNodes: acorn.Node[] = []
+
+        walk.ancestor(ast, {
+          MemberExpression(node1) {
+            const node2 = (node1 as any).object
+            if (node2.type === 'CallExpression' && node2.callee.name === 'require') {
+              requireMemberNodes.push(node1)
+            }
+          },
+          CallExpression(node, ancestors) {
+            if ((node as any).callee.name === 'require') {
+              console.log(ancestors.map(n => n.type))
+              requireCallNodes.push(node)
+            }
+          }
+        })
+
+        // Remove duplicate node
+        const requireNodes = requireMemberNodes.concat(
+          requireCallNodes.filter(node1 =>
+            !requireMemberNodes.some(node2 =>
+              (node2 as any).object.start === node1.start
+            )
+          )
+        )
+
+        if (!requireNodes.length) return
+
+        // console.log(requireNodes)
+
+        // fs.writeFileSync(path.join(__dirname, 'tmp/6.router.json'), JSON.stringify(ast, null, 2))
+        console.log('\n++++\n')
+
+        return _code
+      } catch (error) {
+        throw error
+      }
+    },
+  }
+}

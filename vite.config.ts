@@ -1,11 +1,13 @@
 
 import path from 'path'
-import { defineConfig, Plugin } from 'vite'
+import { defineConfig } from 'vite'
 import { createVuePlugin } from 'vite-plugin-vue2'
 import pkg from './package.json'
 import {
   symlinkIndexHtml,
   styleImport,
+  dynamicImport,
+  commonjs,
 } from './vite-plugins'
 import { testPlugin } from './vite-plugins/test-plugin'
 
@@ -30,12 +32,13 @@ export default defineConfig({
         '~': path.join(__dirname, 'node_modules'),
       },
     }),
+    dynamicImport({}),
+    commonjs({}),
     testPlugin(),
   ],
   resolve: {
     alias: {
       '@': path.join(__dirname, 'src'),
-      '~': path.join(__dirname, 'node_modules'),
     },
   },
 })
