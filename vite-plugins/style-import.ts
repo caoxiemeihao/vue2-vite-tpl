@@ -6,10 +6,7 @@ import vtc from 'vue-template-compiler'
 import Walker from 'node-source-walk'
 import gonzales from 'gonzales-pe'
 
-export function styleImport(opts: {
-  alias: Record<string, string | ((args: Record<string, any>) => string)>,
-}): Plugin {
-  const { alias } = opts
+export function styleImport(options?: Record<string, unknown>): Plugin {
   const walker = new Walker as any
   const isImportStatement = (node) => {
     if (node.type !== 'atrule') { return false }

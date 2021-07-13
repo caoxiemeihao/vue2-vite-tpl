@@ -27,11 +27,7 @@ export default defineConfig({
         },
       },
     }),
-    styleImport({
-      alias: {
-        '~': path.join(__dirname, 'node_modules'),
-      },
-    }),
+    styleImport({}),
     dynamicImport({}),
     commonjs({}),
     testPlugin(),

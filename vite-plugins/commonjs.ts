@@ -5,8 +5,9 @@ import vtc from 'vue-template-compiler'
 import { transpileModule, ModuleKind, SyntaxKind } from 'typescript'
 import { cjsToEsmTransformer } from 'cjstoesm'
 
-export function commonjs(options: Record<string, unknown>): Plugin {
+export function commonjs(options?: Record<string, unknown>): Plugin {
   const fileExts = ['.vue', '.ts', '.tsx', '.js', '.jsx', '.mjs']
+  const refConifg: { current: UserConfig } = { current: null }
 
   const parseQuery = (querystring: string): Record<string, string | boolean> => {
     // { vue: true, type: 'template', 'lang.js': true }
@@ -36,8 +37,6 @@ export function commonjs(options: Record<string, unknown>): Plugin {
 
     return fileExt ?? ''
   }
-
-  const refConifg: { current: UserConfig } = { current: null };
 
   return {
     name: '草鞋没号:commonjs',
