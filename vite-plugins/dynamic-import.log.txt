@@ -1,0 +1,22 @@
+---- '@/views/dynamic' ----
+---- `@/views/${dynamicVar}` + '/index' ----
+---- `@/views/${dynamicVar}/index` ----
+---- `@/views/${dynamicVar}` ----
+
+
+---- '@/views/dynamic' ----
+---- "@/views/" + dynamicVar + '/index' ----
+---- "@/views/" + dynamicVar + "/index" ----
+---- "@/views/" + dynamicVar ----
+
+
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/dynamic' ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/${dynamicVar}` + '/index' ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/${dynamicVar}/index` ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/${dynamicVar}` ---
+
+
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/dynamic' ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/" + dynamicVar + '/index' ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/" + dynamicVar + "/index" ---
+---- /Users/atom/Desktop/npm-test/vue2-vite-tpl/src/views/" + dynamicVar ---
