@@ -36,10 +36,8 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
           CallExpression(node, ancestors: acorn.Node[]) {
             if ((node as any).callee.name !== 'require') return
 
-            const ancestors2 = filterAncestors(ancestors)
-            if (!callExpressions.find(ce => ce[0].start === ancestors2[0].start)) {
-              callExpressions.push(ancestors2)
-            }
+            // console.log(filterAncestors(ancestors).map(n => n.type))
+            callExpressions.push(filterAncestors(ancestors))
           },
         })
 
@@ -68,8 +66,6 @@ function filterAncestors(ancestors: acorn.Node[]) {
  */
 function transformRequire(callExpressions: acorn.Node[][]) {
   for (const callExpression of callExpressions) {
-    // console.log(callExpression.map(n => n.type))
-
     try {
       const firstNode = callExpression[0]
       const transformed = {
@@ -90,27 +86,47 @@ function transformRequire(callExpressions: acorn.Node[][]) {
         const CallExpression = VariableDeclarator.init
 
         // require 成员处理
-        transformed.Statement.Identifier = transformIdentifier(requireIdentifier)
+        if (requireIdentifier.type === 'Identifier') {
+          transformed.Statement.Identifier = transformIdentifier(requireIdentifier)
+        } else if (requireIdentifier.type === 'ObjectPattern') {
+          transformed.Statement.Identifier = transformIObjectPattern(requireIdentifier)
+        }
 
         // require 体处理
-        if (['CallExpression', 'MemberExpression'].includes(CallExpression.type)) {
+        if (CallExpression.type === 'CallExpression') {
           transformed.Statement.CallExpression = transformCallExpression(CallExpression)
+        } else if (CallExpression.type === 'MemberExpression') {
+          transformed.Statement.CallExpression = transformMemberExpression(CallExpression)
         } else if (CallExpression.type === 'ObjectExpression') {
           const requires = []
           for (const property of CallExpression.properties) {
-            requires.push({
-              Property: null, // property.value,
-              CallExpression: transformCallExpression(property.value)
-            })
+            if (property.value.type === 'CallExpression') {
+              requires.push({
+                Property: null, // property.value,
+                CallExpression: transformCallExpression(property.value)
+              })
+            } else if (property.value.type === 'MemberExpression') {
+              requires.push({
+                Property: null, // property.value,
+                CallExpression: transformMemberExpression(property.value),
+              })
+            }
           }
           transformed.ObjectExpression = requires
         } else if (CallExpression.type === 'ArrayExpression') {
           const requires = []
           for (const element of CallExpression.elements) {
-            requires.push({
-              Index: null, // element,
-              CallExpression: transformCallExpression(element),
-            })
+            if (element.type === 'CallExpression') {
+              requires.push({
+                Index: null, // element,
+                CallExpression: transformCallExpression(element),
+              })
+            } else if (element.type === 'MemberExpression') {
+              requires.push({
+                Index: null, // element,
+                CallExpression: transformMemberExpression(element),
+              })
+            }
           }
           transformed.ArrayExpression = requires
         }
@@ -126,43 +142,50 @@ function transformRequire(callExpressions: acorn.Node[][]) {
   }
 }
 
+/**
+ * const acorn
+ */
 function transformIdentifier(node: acorn.Node) {
-  if (node.type === 'Identifier') {
-    /** const acorn */
-    return {
-      type: node.type,
-      // node,
-      name: (node as any).name,
-    }
-  } else if (node.type === 'ObjectPattern') {
-    /** const { ancestor, simple } */
-    return {
-      type: node.type,
-      // node,
-      names: (node as any).properties.map(property => property.key.name),
-    }
+  return {
+    type: 'RequireIdentifier',
+    // node,
+    name: (node as any).name,
   }
 }
 
 /**
+ * const { ancestor, simple }
+ */
+function transformIObjectPattern(node: acorn.Node) {
+  return {
+    type: 'RequireIdentifier',
+    // node,
+    names: (node as any).properties.map(property => property.key.name),
+  }
+}
+
+/**
+ * require('acorn').parse
+ * @todo 只考虑常量 require 参数，不考虑拼接、模板字符串 21-07-15
+ */
+function transformMemberExpression(node: acorn.Node) {
+  return {
+    type: 'Require',
+    // node,
+    property: (node as any).property.name,
+    require: (node as any).object.arguments[0].value,
+  }
+}
+
+/**
+ * require('acorn-walk')
  * @todo 只考虑常量 require 参数，不考虑拼接、模板字符串 21-07-15
  */
 function transformCallExpression(node: acorn.Node) {
-
-  if (node.type === 'CallExpression') {
-    /** require('acorn-walk') */
-    return {
-      type: node.type,
-      // node,
-      require: (node as any).arguments[0].value,
-    }
-  } else if (node.type === 'MemberExpression') {
-    /** require('acorn').parse */
-    return {
-      type: node.type,
-      // node,
-      property: (node as any).property.name,
-      require: (node as any).object.arguments[0].value,
-    }
+  return {
+    type: 'Require',
+    // node,
+    require: (node as any).arguments[0].value,
   }
 }
+
