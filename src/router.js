@@ -1,5 +1,7 @@
 import { DEFAULT_EXTENSIONS } from '../vite-plugins/utils'
 
+import './require'
+
 console.log(DEFAULT_EXTENSIONS)
 
 const dynamicVar = 'dynamic'
