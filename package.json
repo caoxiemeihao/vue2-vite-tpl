@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "serve": "vue-cli-service serve",
-    "vite": "vite",
+    "vite": "export NODE_ENV=development; vite",
     "build": "vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
@@ -17,7 +17,9 @@
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
+    "acorn-walk": "^8.1.1",
     "babel-eslint": "^10.1.0",
+    "cjs-es": "^0.8.2",
     "cjstoesm": "^1.1.4",
     "eslint": "^6.7.2",
     "eslint-plugin-vue": "^6.2.2",
