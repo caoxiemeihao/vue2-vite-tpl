@@ -1,6 +1,7 @@
 const parse = require('acorn').parse
 const { ancestor, simple } = require('acorn-walk')
 const acorn = require('acorn')
+const home = require('@/views/home')
 
 require('vite')
 

@@ -83,9 +83,7 @@ export interface BaseNode {
 }
 
 export interface IdentifierNode extends BaseNode {
-  /** const acorn = require('acorn') */
   name?: string
-  /** const { ancestor, simple } = require('acorn-walk') */
   names?: string[]
 }
 
@@ -317,136 +315,7 @@ function mergeRequireToImport(requires: RequireRecord[]) {
 
 // ------------------------------
 
-export interface ImportRecord {
-  /**
-   * const acornDefault = require('acorn').default
-   * const alias = require('acorn').parse
-   * const acorn = require('acorn')
-   */
-  importName?: {
-    name: string | Record</* name as alias | * as name */string, string>
-    code: string
-  }
-  /**
-   * const parse = require('acorn').parse
-   * const { ancestor, simple } = require('acorn-walk')
-   */
-  importNames?: {
-    names: string[]
-    code: string
-  }
-  /** require('acorn') */
-  importOnly?: {}
-  /** const { ancestor, simple } = require('acorn-walk').other */
-  importDeconstruct?: {
-    name: string
-    deconstruct: string[]
-    codes: string[]
-  }
-  /** const { ancestor, simple } = require('acorn-walk').default */
-  importDefaultDeconstruct?: {
-    /** 自定义模块名 */
-    name: string
-    deconstruct: string[]
-    codes: string[]
-  }
-  require: string
-}
-
 function requireToImport(requires: RequireRecord[]) {
-  const statements = requires.filter(
-    req => req.Statement.CallExpression
-  ) as unknown as { Statement: RequireStatement }[]
-  const expressions = requires.filter(
-    req => req.ArrayExpression || req.ObjectExpression
-  ) as unknown as (ObjectExpressionNode | ArrayExpression)[]
-  let counter = 0
-  const imports: ImportRecord[] = []
-
-  for (const statement of statements) {
-    const { Identifier, CallExpression } = statement.Statement
-    const item: ImportRecord = { require: CallExpression.require }
-
-    if (Identifier === null) {
-      // require('acorn')
-      item.importOnly = {}
-    } else if (Identifier.name) {
-      const property = CallExpression.property
-      if (property) {
-        if (property === 'default') {
-          // const acornDefault = require('acorn').default
-          item.importName = {
-            name: Identifier.name,
-            code: `import ${Identifier.name} from "${CallExpression.require}";`,
-          }
-        } else {
-          if (Identifier.name === property) {
-            // const parse = require('acorn').parse
-            item.importNames = {
-              names: [property],
-              code: `import { ${property} } from "${CallExpression.require}";`,
-            }
-          } else {
-            // const alias = require('acorn').parse
-            item.importName = {
-              name: { [property]: Identifier.name },
-              code: `import { ${property} as ${Identifier.name} } from "${CallExpression.require}";`,
-            }
-          }
-        }
-      } else {
-        // const acorn = require('acorn')
-        item.importName = {
-          name: { '*': Identifier.name },
-          code: `import * as ${Identifier.name} from "${CallExpression.require}";`,
-        }
-      }
-    } else if (Identifier.names) {
-      const property = CallExpression.property
-      if (property) {
-        if (property === 'default') {
-          // const { ancestor, simple } = require('acorn-walk').default
-          const moduleName = `__module_default_${counter++}`
-          item.importDefaultDeconstruct = {
-            name: moduleName,
-            deconstruct: Identifier.names,
-            codes: [
-              `import ${moduleName} from "${CallExpression.require}";`,
-              `const { ${Identifier.names.join(', ')} } = ${moduleName};`,
-            ],
-          }
-        } else {
-          // const { ancestor, simple } = require('acorn-walk').other
-          const moduleName = `__module_name_${counter++}` // 防止命名冲突
-          item.importDeconstruct = {
-            name: moduleName,
-            deconstruct: Identifier.names,
-            codes: [
-              `import { ${property} as ${moduleName} } from "${CallExpression.require}";`,
-              `const { ${Identifier.names.join(', ')} } = ${moduleName};`,
-            ],
-          }
-        }
-      } else {
-        // const { ancestor, simple } = require('acorn-walk')
-        item.importNames = {
-          names: Identifier.names,
-          code: `import { ${Identifier.names.join(', ')} } from "${CallExpression.require}";`,
-        }
-      }
-    }
-
-    console.log(item)
-
-    imports.push(item)
-  }
-
-  for (const expression of expressions) {
-    const { } = expression
-  }
-}
-
-function requireToImport1(requires: RequireRecord[]) {
   const statements = requires.filter(
     req => req.Statement.CallExpression
   ) as unknown as { Statement: RequireStatement }[]
