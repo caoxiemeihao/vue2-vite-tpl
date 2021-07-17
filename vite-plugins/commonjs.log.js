@@ -238,58 +238,55 @@ vite [
 
 // ------------------------------------------------
 
-{
-  require: 'acorn',
-  importNames: { names: [ 'parse' ], code: 'import { parse } from "acorn";' }
-}
-{
-  require: 'acorn-walk',
-  importDefaultDeconstruct: {
-    name: '__module_default_0',
-    deconstruct: [ 'ancestor', 'simple' ],
-    codes: [
-      'import __module_default_0 from "acorn-walk";',
-      'const { ancestor, simple } = __module_default_0;'
-    ]
+[
+  {
+    require: 'acorn',
+    importNames: { names: [Array], code: 'import { parse } from "acorn";' }
+  },
+  {
+    require: 'acorn-walk',
+    importNames: {
+      names: [Array],
+      code: 'import { ancestor, simple } from "acorn-walk";'
+    }
+  },
+  {
+    require: 'acorn',
+    importName: { name: [Object], code: 'import * as acorn from "acorn";' }
+  },
+  {
+    require: '@/views/home',
+    importName: { name: [Object], code: 'import * as home from "@/views/home";' }
+  },
+  { require: 'vite', importOnly: {} },
+  {
+    require: '@/views/news',
+    importDefaultExpression: {
+      name: '__module_default__expression__0',
+      code: 'import __module_default__expression__0 from "@/views/news";'
+    }
+  },
+  {
+    require: '@/views/home',
+    importExpression: {
+      name: '__module_name__expression__1',
+      code: 'import * as __module_name__expression__1 from "@/views/home";'
+    }
+  },
+  {
+    require: '@/views/news',
+    importDefaultExpression: {
+      name: '__module_default__expression__2',
+      code: 'import __module_default__expression__2 from "@/views/news";'
+    }
+  },
+  {
+    require: '@/views/home',
+    importExpression: {
+      name: '__module_name__expression__3',
+      code: 'import * as __module_name__expression__3 from "@/views/home";'
+    }
   }
-}
-{
-  require: 'acorn',
-  importName: { name: { '*': 'acorn' }, code: 'import * as acorn from "acorn";' }
-}
-{
-  require: '@/views/home',
-  importName: { name: 'home', code: 'import home from "@/views/home";' }
-}
-{ require: 'vite', importOnly: {} }
-// ---------
-{
-  require: 'acorn',
-  importNames: { names: [ 'parse' ], code: 'import { parse } from "acorn";' }
-}
-{
-  require: 'acorn-walk',
-  importDeconstruct: {
-    name: '__module_name_0',
-    deconstruct: [ 'ancestor', 'simple' ],
-    codes: [
-      'import { other as __module_name_0 } from "acorn-walk";',
-      'const { ancestor, simple } = __module_name_0;'
-    ]
-  }
-}
-{
-  require: 'acorn',
-  importName: { name: { '*': 'acorn' }, code: 'import * as acorn from "acorn";' }
-}
-{
-  require: '@/views/home',
-  importName: {
-    name: { '*': 'home' },
-    code: 'import * as home from "@/views/home";'
-  }
-}
-{ require: 'vite', importOnly: {} }
-
+]
 // ------------------------------------------------
 

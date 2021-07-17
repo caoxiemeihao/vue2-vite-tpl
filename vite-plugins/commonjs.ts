@@ -46,8 +46,9 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
         })
 
         const requires = transformRequire(callExpressions)
-        // mergeRequireToImport(requires)
-        requireToImport(requires)
+        const imports = requireToImport(requires)
+
+        console.log(imports)
 
         // fs.writeFileSync(path.join(__dirname, 'tmp/0.require.json'), JSON.stringify(ast, null, 2))
       } catch (error) {
@@ -297,26 +298,6 @@ function collectRequire(requires: RequireRecord[]) {
 
 // ------------------------------
 
-/**
- * @todo import 合并
- * @todo default 偷懒；视作普通属性
- */
-function mergeRequireToImport(requires: RequireRecord[]) {
-  const collected: CollectRequireDict = collectRequire(requires)
-
-  for (const [impPath, records] of Object.entries(collected)) {
-    for (const record of records) {
-      if (record.type === 'declarator') {
-
-      } else if (['arrayExpression', 'objectExpression'].includes(record.type)) {
-
-      }
-    }
-  }
-}
-
-// ------------------------------
-
 export interface ImportRecord {
   /**
    * const acornDefault = require('acorn').default
@@ -324,7 +305,7 @@ export interface ImportRecord {
    * const acorn = require('acorn')
    */
   importName?: {
-    name: string | Record</* name as alias | * as name */string, string>
+    name: string | Record</* (name as alias | * as name) */string, string>
     code: string
   }
   /**
@@ -350,6 +331,17 @@ export interface ImportRecord {
     deconstruct: string[]
     codes: string[]
   }
+  /** For ArrayExpression, ObjectExpression statement. */
+  importExpression?: {
+    /** 自定义模块名 */
+    name: string
+    code: string
+  }
+  importDefaultExpression?: {
+    /** 自定义模块名 */
+    name: string
+    code: string
+  }
   require: string
 }
 
@@ -359,7 +351,10 @@ function requireToImport(requires: RequireRecord[]) {
   ) as unknown as { Statement: RequireStatement }[]
   const expressions = requires.filter(
     req => req.ArrayExpression || req.ObjectExpression
-  ) as unknown as (ObjectExpressionNode | ArrayExpression)[]
+  ) as unknown as {
+    ObjectExpression: ObjectExpressionNode[] | null
+    ArrayExpression: ArrayExpression[] | null
+  }[]
   let counter = 0
   const imports: ImportRecord[] = []
 
@@ -436,71 +431,35 @@ function requireToImport(requires: RequireRecord[]) {
       }
     }
 
-    console.log(item)
-
+    // console.log(item)
     imports.push(item)
   }
 
-  for (const expression of expressions) {
-    const { } = expression
-  }
-}
+  for (const { ArrayExpression, ObjectExpression } of expressions) {
+    for (const { CallExpression } of ArrayExpression || ObjectExpression) {
+      const item: ImportRecord = { require: CallExpression.require }
 
-function requireToImport1(requires: RequireRecord[]) {
-  const statements = requires.filter(
-    req => req.Statement.CallExpression
-  ) as unknown as { Statement: RequireStatement }[]
-  const expressions = requires.filter(
-    req => req.ArrayExpression || req.ObjectExpression
-  ) as unknown as (ObjectExpressionNode | ArrayExpression)[]
-  let counter = 0
-
-  for (const statement of statements) {
-    const { Identifier, CallExpression } = statement.Statement
-    let code: string
-
-    if (Identifier === null) {
-      // require('vite')
-      code = `import "${CallExpression.require}";`
-    } else if (Identifier.name) {
-      const property = CallExpression.property
-      if (property) {
-        if (property === 'default') {
-          code = `import ${Identifier.name} from "${CallExpression.require}";`
-        } else {
-          code = Identifier.name === property
-            // const parse = require('acorn').parse
-            ? `import { ${Identifier.name} } from "${CallExpression.require}";`
-            : `import { ${property} as ${Identifier.name} } from "${CallExpression.require}";`
+      if (CallExpression.property === 'default') {
+        const moduleName = `__module_default__expression__${counter++}`
+        item.importDefaultExpression = {
+          name: moduleName,
+          code: `import ${moduleName} from "${CallExpression.require}";`,
         }
       } else {
-        // const parse = require('acorn')
-        code = `import * as ${Identifier.name} from "${CallExpression.require}";`
-      }
-    } else if (Identifier.names) {
-      const property = CallExpression.property
-      if (property) {
-        // const { ancestor, simple } = require('acorn-walk').default
-        if (property === 'default') {
-          const moduleName = `__module_name_${counter++}`
-          code = `import ${moduleName} from "${CallExpression.require}";
-const { ${Identifier.names.join(', ')} } = ${moduleName};`
-        } else {
-          code = `import { ${property} } from "${CallExpression.require}";
-const { ${Identifier.names.join(', ')} } = ${property};`
+        // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
+        const moduleName = `__module_name__expression__${counter++}`
+        item.importExpression = {
+          name: moduleName,
+          code: `import * as ${moduleName} from "${CallExpression.require}";`,
         }
-      } else {
-        // const { ancestor, simple } = require('acorn-walk')
-        code = `import { ${Identifier.names.join(', ')} } from "${CallExpression.require}";`
       }
+
+      // console.log(item)
+      imports.push(item)
     }
-
-    console.log('----', code)
   }
 
-  for (const expression of expressions) {
-    const { } = expression
-  }
+  return imports
 }
 
 // ------------------------------
