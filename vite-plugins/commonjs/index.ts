@@ -7,7 +7,7 @@ import {
   parsePathQuery,
   detectFileExist,
   convertVueFile,
-} from './utils'
+} from '../utils'
 
 function errorLog(TAG: string, error: Error) {
   console.log()
@@ -34,7 +34,7 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
 
       // if (!id.endsWith('router.js')) return
 
-      console.log('----', id, '----')
+      // console.log('----', id, '----')
       errorLog.id = id
 
       try {
