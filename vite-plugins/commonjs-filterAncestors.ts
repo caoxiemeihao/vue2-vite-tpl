@@ -40,12 +40,17 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
       try {
         let _code = id.endsWith('.vue') ? convertVueFile(code).script.content : code
         const ast = this.parse(_code)
-        const requires: RequireRecord[] = []
+        const callExpressions: acorn.Node[][] = []
 
         walk.ancestor(ast, {
           CallExpression(node, ancestors: acorn.Node[]) {
             if ((node as any).callee.name !== 'require') return
-            requires.push(transformRequire(ancestors/* 需要深拷贝 */.slice(0)))
+
+            const ancestors2 = filterAncestors(ancestors)
+            if (!callExpressions.find(ce => ce[0].start === ancestors2[0].start)) {
+              // filter duplicate
+              callExpressions.push(ancestors2)
+            }
           },
         })
 
@@ -53,7 +58,9 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
         //   console.log(CE.map(ce => ce.type))
         // }
 
+        const requires = transformRequire(callExpressions)
         const imports = transformImport(requires)
+
         const cjsEsmList = extractCjsEsm(code, imports)
         const importStatements: string[] = []
         const importExpressionStatements: string[] = []
@@ -117,7 +124,8 @@ ${importDeconstructs.join('\n')}
 ${_code}
 `
 
-        // console.log(_code)
+        console.log(_code)
+
         return _code
       } catch (error) {
         throw error
@@ -143,8 +151,8 @@ export interface RequireStatement {
 
 export interface RequireRecord {
   Statement: RequireStatement
-  ObjectExpression: ObjectExpressionNode | null
-  ArrayExpression: ArrayExpressionNode | null
+  ObjectExpression: ObjectExpressionNode[] | null
+  ArrayExpression: ArrayExpressionNode[] | null
 }
 
 export interface BaseNode {
@@ -178,65 +186,61 @@ export interface ArrayExpressionNode {
 
 // ------------------------------
 
-function transformRequire(ancestors: acorn.Node[]) {
-  const requireRecord: RequireRecord = {
-    Statement: {
-      VariableDeclarator: null,
-      CallExpression: null,
-    },
-    ObjectExpression: null,
-    ArrayExpression: null,
+function transformRequire(callExpressions: acorn.Node[][]) {
+  const requires: RequireRecord[] = []
+
+  for (const ancestors of callExpressions) {
+    // console.log(ancestors.map(n => n.type))
+    try {
+      const firstNode = ancestors[0]
+      const transformed: RequireRecord = {
+        Statement: {
+          VariableDeclarator: null,
+          CallExpression: null,
+        },
+        ObjectExpression: null,
+        ArrayExpression: null,
+      }
+
+      if (firstNode.type === 'VariableDeclaration') {
+        // require 的 VariableDeclaration 只会有一项 VariableDeclarator
+        const VariableDeclarator = (firstNode as any).declarations[0]
+        // require 成员
+        const requireIdentifier = VariableDeclarator.id
+        // require 体
+        const CallExpression = VariableDeclarator.init
+
+        // require 成员处理
+        transformed.Statement.VariableDeclarator = transformVariableDeclarator(requireIdentifier)
+
+        // require 体处理
+        if (['CallExpression', 'MemberExpression'].includes(CallExpression.type)) {
+          transformed.Statement.CallExpression = transformCallExpression(CallExpression, ancestors)
+        } else if (CallExpression.type === 'ObjectExpression') {
+          transformed.ObjectExpression = CallExpression.properties.map(property => ({
+            Property: property.key.name,
+            CallExpression: transformCallExpression(property.value, ancestors)
+          }))
+        } else if (CallExpression.type === 'ArrayExpression') {
+          transformed.ArrayExpression = CallExpression.elements.map((element, idx) => ({
+            Index: idx,
+            CallExpression: transformCallExpression(element, ancestors),
+          }))
+        }
+
+      } else if (firstNode.type === 'CallExpression') {
+        transformed.Statement.CallExpression = transformCallExpression(firstNode, ancestors)
+      }
+
+      // console.log(transformed)
+      requires.push(transformed)
+    } catch (error) {
+      errorLog('transformRequire]', error)
+      throw error
+    }
   }
-  // console.log(ancestors.map(n => n.type))
-  try {
-    let parentIndex: number
-    for (let len = ancestors.length, x = len - 1; x >= 0; x--) {
-      // 反向查找
-      if (!['CallExpression', 'MemberExpression'].includes(ancestors[x].type)) {
-        parentIndex = x
-        break
-      }
-    }
 
-    const parentNode = ancestors[parentIndex]
-    const requireNode = ancestors[parentIndex + 1]
-
-    // An VariableDeclaration statement
-    if (parentNode.type === 'VariableDeclarator') {
-      requireRecord.Statement = {
-        VariableDeclarator: transformVariableDeclarator((parentNode as any).id),
-        CallExpression: transformCallExpression(requireNode, ancestors),
-      }
-    }
-    // An ObjectExpression Property 
-    else if (parentNode.type === 'Property') {
-      requireRecord.ObjectExpression = {
-        Property: (parentNode as any).key.name,
-        CallExpression: transformCallExpression(requireNode, ancestors)
-      }
-    }
-    // An ArrayExpression element
-    else if (parentNode.type === 'ArrayExpression') {
-      const element = requireNode as any
-      requireRecord.ArrayExpression = {
-        Index: (parentNode as any).elements.findIndex(elem => elem.start === requireNode.start),
-        CallExpression: transformCallExpression(element, ancestors),
-      }
-    }
-    // Just require statement
-    else {
-      requireRecord.Statement = {
-        VariableDeclarator: null,
-        CallExpression: transformCallExpression(requireNode, ancestors),
-      }
-    }
-
-    // console.log(requireRecord)
-    return requireRecord
-  } catch (error) {
-    errorLog('transformRequire]', error)
-    throw error
-  }
+  return requires
 }
 
 function transformVariableDeclarator(node: acorn.Node): VariableDeclaratorNode {
@@ -260,8 +264,7 @@ function transformVariableDeclarator(node: acorn.Node): VariableDeclaratorNode {
 /**
  * @todo 只考虑常量 require 参数，不考虑拼接、模板字符串 21-07-15
  */
-function transformCallExpression(CallExpressionOrMemberExpression: acorn.Node, ancestors: acorn.Node[]): CallExpressionNode {
-  const node = CallExpressionOrMemberExpression
+function transformCallExpression(node: acorn.Node, ancestors: acorn.Node[]): CallExpressionNode {
 
   if (node.type === 'CallExpression') {
     /** require('acorn-walk') */
@@ -353,8 +356,8 @@ function transformImport(requires: RequireRecord[]) {
   const expressions = requires.filter(
     req => req.ArrayExpression || req.ObjectExpression
   ) as unknown as {
-    ObjectExpression: ObjectExpressionNode | null
-    ArrayExpression: ArrayExpressionNode | null
+    ObjectExpression: ObjectExpressionNode[] | null
+    ArrayExpression: ArrayExpressionNode[] | null
   }[]
   let counter = 0
   const imports: ImportRecord[] = []
@@ -367,7 +370,6 @@ function transformImport(requires: RequireRecord[]) {
         ancestors: CallExpression.ancestors,
         require: CallExpression.require,
       }
-
 
       if (VD === null) {
         // require('acorn')
@@ -447,36 +449,37 @@ function transformImport(requires: RequireRecord[]) {
   }
 
   for (const { ArrayExpression, ObjectExpression } of expressions) {
-    try {
-      const arrOrObj = ArrayExpression || ObjectExpression
-      const { CallExpression } = arrOrObj
-      const expType = typeof (arrOrObj as any).Index === 'number' ? 'array' : 'object'
-      const item: ImportRecord = {
-        node: CallExpression.node,
-        ancestors: CallExpression.ancestors,
-        require: CallExpression.require,
-      }
-
-      if (CallExpression.property === 'default') {
-        const moduleName = `_MODULE_default___EXPRESSION_${expType}__${counter++}`
-        item.importDefaultExpression = {
-          name: moduleName,
-          code: `import ${moduleName} from "${CallExpression.require}"`,
+    for (const arrOrObj of ArrayExpression || ObjectExpression) {
+      try {
+        const { CallExpression } = arrOrObj
+        const expType = typeof (arrOrObj as any).Index === 'number' ? 'array' : 'object'
+        const item: ImportRecord = {
+          node: CallExpression.node,
+          ancestors: CallExpression.ancestors,
+          require: CallExpression.require,
         }
-      } else {
-        // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
-        const moduleName = `_MODULE_name__EXPRESSION_${expType}__${counter++}`
-        item.importExpression = {
-          name: { '*': moduleName },
-          code: `import * as ${moduleName} from "${CallExpression.require}"`,
-        }
-      }
 
-      // console.log(item)
-      imports.push(item)
-    } catch (error) {
-      errorLog('[transformImport.expressions]', error)
-      throw error
+        if (CallExpression.property === 'default') {
+          const moduleName = `_MODULE_default___EXPRESSION_${expType}__${counter++}`
+          item.importDefaultExpression = {
+            name: moduleName,
+            code: `import ${moduleName} from "${CallExpression.require}"`,
+          }
+        } else {
+          // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
+          const moduleName = `_MODULE_name__EXPRESSION_${expType}__${counter++}`
+          item.importExpression = {
+            name: { '*': moduleName },
+            code: `import * as ${moduleName} from "${CallExpression.require}"`,
+          }
+        }
+
+        // console.log(item)
+        imports.push(item)
+      } catch (error) {
+        errorLog('[transformImport.expressions]', error)
+        throw error
+      }
     }
   }
 

@@ -13,7 +13,7 @@ export const routes = [
   },
   {
     path: '/news',
-    component: require('@/views/news.vue'),
+    component: require('@/views/news.vue').default,
   },
   {
     path: '/dynamic',
