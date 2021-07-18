@@ -1,7 +1,7 @@
 const parse = require('acorn').parse
 const { ancestor, simple } = require('acorn-walk')
 const acorn = require('acorn')
-const home = require('@/views/home')
+const home = require('@/views/home').home
 
 require('vite')
 
@@ -11,7 +11,7 @@ const dict = {
 }
 
 const arr = [
-  require('@/views/news').default,
+  require('@/views/news').news,
   require('@/views/home'),
 ]
 

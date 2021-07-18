@@ -1,41 +1,3 @@
-[
-  'VariableDeclaration',
-  'VariableDeclarator',
-  'MemberExpression',
-  'CallExpression'
-]
-[ 'VariableDeclaration', 'VariableDeclarator', 'CallExpression' ]
-[ 'VariableDeclaration', 'VariableDeclarator', 'CallExpression' ]
-[ 'CallExpression' ]
-[
-  'VariableDeclaration',
-  'VariableDeclarator',
-  'ObjectExpression',
-  'Property',
-  'MemberExpression',
-  'CallExpression'
-]
-[
-  'VariableDeclaration',
-  'VariableDeclarator',
-  'ObjectExpression',
-  'Property',
-  'CallExpression'
-]
-[
-  'VariableDeclaration',
-  'VariableDeclarator',
-  'ArrayExpression',
-  'MemberExpression',
-  'CallExpression'
-]
-[
-  'VariableDeclaration',
-  'VariableDeclarator',
-  'ArrayExpression',
-  'CallExpression'
-]
-
 // --------------------------
 
 [
@@ -44,6 +6,7 @@
   'MemberExpression',
   'CallExpression'
 ]
+[ 'VariableDeclaration', 'VariableDeclarator', 'CallExpression' ]
 [ 'VariableDeclaration', 'VariableDeclarator', 'CallExpression' ]
 [ 'VariableDeclaration', 'VariableDeclarator', 'CallExpression' ]
 [ 'CallExpression' ]
@@ -241,10 +204,12 @@ vite [
 [
   {
     require: 'acorn',
+    ancestors: [ [Node], [Node], [Node], [Node] ],
     importNames: { names: [Array], code: 'import { parse } from "acorn";' }
   },
   {
     require: 'acorn-walk',
+    ancestors: [ [Node], [Node], [Node] ],
     importNames: {
       names: [Array],
       code: 'import { ancestor, simple } from "acorn-walk";'
@@ -252,41 +217,239 @@ vite [
   },
   {
     require: 'acorn',
+    ancestors: [ [Node], [Node], [Node] ],
     importName: { name: [Object], code: 'import * as acorn from "acorn";' }
   },
   {
     require: '@/views/home',
-    importName: { name: [Object], code: 'import * as home from "@/views/home";' }
+    ancestors: [ [Node], [Node], [Node], [Node] ],
+    importNames: { names: [Array], code: 'import { home } from "@/views/home";' }
   },
-  { require: 'vite', importOnly: {} },
+  { require: 'vite', ancestors: [ [Node] ], importOnly: {} },
   {
     require: '@/views/news',
+    ancestors: [ [Node], [Node], [Node], [Node], [Node], [Node] ],
     importDefaultExpression: {
-      name: '__module_default__expression__0',
-      code: 'import __module_default__expression__0 from "@/views/news";'
+      name: '_MODULE_default___EXPRESSION_object__0',
+      code: 'import _MODULE_default___EXPRESSION_object__0 from "@/views/news";'
     }
   },
   {
     require: '@/views/home',
+    ancestors: [ [Node], [Node], [Node], [Node], [Node], [Node] ],
     importExpression: {
-      name: '__module_name__expression__1',
-      code: 'import * as __module_name__expression__1 from "@/views/home";'
+      name: '_MODULE_name__EXPRESSION_object__1',
+      code: 'import * as _MODULE_name__EXPRESSION_object__1 from "@/views/home";'
     }
   },
   {
     require: '@/views/news',
-    importDefaultExpression: {
-      name: '__module_default__expression__2',
-      code: 'import __module_default__expression__2 from "@/views/news";'
+    ancestors: [ [Node], [Node], [Node], [Node], [Node] ],
+    importExpression: {
+      name: '_MODULE_name__EXPRESSION_array__2',
+      code: 'import * as _MODULE_name__EXPRESSION_array__2 from "@/views/news";'
     }
   },
   {
     require: '@/views/home',
+    ancestors: [ [Node], [Node], [Node], [Node], [Node] ],
     importExpression: {
-      name: '__module_name__expression__3',
-      code: 'import * as __module_name__expression__3 from "@/views/home";'
+      name: '_MODULE_name__EXPRESSION_array__3',
+      code: 'import * as _MODULE_name__EXPRESSION_array__3 from "@/views/home";'
     }
   }
 ]
+
+// ------------------------------------------------
+
+const parse = require('acorn').parse
+const { ancestor, simple } = require('acorn-walk')
+const acorn = require('acorn')
+const home = require('@/views/home').home
+// ----
+const parse = require('acorn').parse
+const { ancestor, simple } = require('acorn-walk').aaaa
+const acorn = require('acorn')
+const home = require('@/views/home').home
+
+// ------------------------------------------------
+
+{
+  node: Node {
+    type: 'VariableDeclaration',
+    start: 0,
+    end: 36,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    declarations: [ [Node] ],
+    kind: 'const'
+  },
+  require: 'acorn',
+  cjs: { code: "const parse = require('acorn').parse" },
+  importNames: { names: [ 'parse' ], code: 'import { parse } from "acorn"' }
+}
+{
+  node: Node {
+    type: 'VariableDeclaration',
+    start: 37,
+    end: 87,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    declarations: [ [Node] ],
+    kind: 'const'
+  },
+  require: 'acorn-walk',
+  cjs: { code: "const { ancestor, simple } = require('acorn-walk')" },
+  importNames: {
+    names: [ 'ancestor', 'simple' ],
+    code: 'import { ancestor, simple } from "acorn-walk"'
+  }
+}
+{
+  node: Node {
+    type: 'VariableDeclaration',
+    start: 88,
+    end: 118,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    declarations: [ [Node] ],
+    kind: 'const'
+  },
+  require: 'acorn',
+  cjs: { code: "const acorn = require('acorn')" },
+  importName: { name: { '*': 'acorn' }, code: 'import * as acorn from "acorn"' }
+}
+{
+  node: Node {
+    type: 'VariableDeclaration',
+    start: 119,
+    end: 160,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    declarations: [ [Node] ],
+    kind: 'const'
+  },
+  require: '@/views/home',
+  cjs: { code: "const home = require('@/views/home').home" },
+  importNames: { names: [ 'home' ], code: 'import { home } from "@/views/home"' }
+}
+{
+  node: Node {
+    type: 'CallExpression',
+    start: 162,
+    end: 177,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    callee: Node {
+      type: 'Identifier',
+      start: 162,
+      end: 169,
+      loc: [SourceLocation],
+      name: 'require'
+    },
+    arguments: [ [Node] ],
+    optional: false
+  },
+  require: 'vite',
+  cjs: { code: "require('vite')" },
+  importOnly: { code: 'import "vite"' }
+}
+{
+  node: Node {
+    type: 'MemberExpression',
+    start: 202,
+    end: 233,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    object: Node {
+      type: 'CallExpression',
+      start: 202,
+      end: 225,
+      loc: [SourceLocation],
+      callee: [Node],
+      arguments: [Array],
+      optional: false
+    },
+    property: Node {
+      type: 'Identifier',
+      start: 226,
+      end: 233,
+      loc: [SourceLocation],
+      name: 'default'
+    },
+    computed: false,
+    optional: false
+  },
+  require: '@/views/news',
+  cjs: { code: "require('@/views/news').default" },
+  importDefaultExpression: {
+    name: '_MODULE_default___EXPRESSION_object__0',
+    code: 'import _MODULE_default___EXPRESSION_object__0 from "@/views/news"'
+  }
+}
+{
+  node: Node {
+    type: 'CallExpression',
+    start: 243,
+    end: 266,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    callee: Node {
+      type: 'Identifier',
+      start: 243,
+      end: 250,
+      loc: [SourceLocation],
+      name: 'require'
+    },
+    arguments: [ [Node] ],
+    optional: false
+  },
+  require: '@/views/home',
+  cjs: { code: "require('@/views/home')" },
+  importExpression: {
+    name: { '*': '_MODULE_name__EXPRESSION_object__1' },
+    code: 'import * as _MODULE_name__EXPRESSION_object__1 from "@/views/home"'
+  }
+}
+{
+  node: Node {
+    type: 'CallExpression',
+    start: 287,
+    end: 310,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    callee: Node {
+      type: 'Identifier',
+      start: 287,
+      end: 294,
+      loc: [SourceLocation],
+      name: 'require'
+    },
+    arguments: [ [Node] ],
+    optional: false
+  },
+  require: '@/views/news',
+  cjs: { code: "require('@/views/news')" },
+  importExpression: {
+    name: { '*': '_MODULE_name__EXPRESSION_array__2' },
+    code: 'import * as _MODULE_name__EXPRESSION_array__2 from "@/views/news"'
+  }
+}
+{
+  node: Node {
+    type: 'CallExpression',
+    start: 319,
+    end: 342,
+    loc: SourceLocation { start: [Position], end: [Position] },
+    callee: Node {
+      type: 'Identifier',
+      start: 319,
+      end: 326,
+      loc: [SourceLocation],
+      name: 'require'
+    },
+    arguments: [ [Node] ],
+    optional: false
+  },
+  require: '@/views/home',
+  cjs: { code: "require('@/views/home')" },
+  importExpression: {
+    name: { '*': '_MODULE_name__EXPRESSION_array__3' },
+    code: 'import * as _MODULE_name__EXPRESSION_array__3 from "@/views/home"'
+  }
+}
+
 // ------------------------------------------------
 
