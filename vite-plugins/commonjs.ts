@@ -25,6 +25,9 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
       if (parsePathQuery(id).type === 'template') return
       if (!/(require|exports)/g.test(code)) return
 
+      /**
+       * @todo 报错
+       */
       if (!id.endsWith('require.js')) return
 
       try {
@@ -46,8 +49,71 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
 
         const requires = transformRequire(callExpressions)
         const imports = transformImport(requires)
-        const tmp = extractCjsEsm(code, imports)
 
+        const cjsEsmList = extractCjsEsm(code, imports)
+        const importStatements: string[] = []
+        const importExpressionStatements: string[] = []
+        const importDeconstructs: string[] = []
+
+        for (const item of cjsEsmList.reverse()) {
+          const {
+            node,
+            require,
+            importName,
+            importNames,
+            importOnly,
+            importDeconstruct,
+            importDefaultDeconstruct,
+            importExpression,
+            importDefaultExpression,
+          } = item
+          let middle: string
+
+          if (importName) {
+            middle = ''
+            importStatements.unshift(importName.code)
+          } else if (importNames) {
+            middle = ''
+            importStatements.unshift(importNames.code)
+          } else if (importOnly) {
+            middle = ''
+            importStatements.unshift(importOnly.code)
+          } else if (importDeconstruct) {
+            middle = ''
+            importStatements.unshift(importDeconstruct.codes[0])
+            importDeconstructs.unshift(importDeconstruct.codes[1])
+          } else if (importDefaultDeconstruct) {
+            middle = ''
+            importStatements.unshift(importDefaultDeconstruct.codes[0])
+            importDeconstructs.unshift(importDefaultDeconstruct.codes[1])
+          } else if (importExpression) {
+            middle = importExpression.name['*']
+            importExpressionStatements.unshift(importExpression.code)
+          } else if (importDefaultExpression) {
+            middle = importDefaultExpression.name
+            importExpressionStatements.unshift(importDefaultExpression.code)
+          }
+
+          if (typeof middle === 'string') {
+            let end = node.end
+            if (middle === '' && _code[node.end + 1] === '\n') { end += 1 } // 去掉尾部换行
+            _code = _code.slice(0, node.start) + middle + _code.slice(end)
+          }
+        }
+
+        _code = `
+/** CommonJs statements */
+${importStatements.join('\n')}
+
+/** CommonJs expressions */
+${importExpressionStatements.join('\n')}
+
+/** CommonJs deconstructs */
+${importDeconstructs.join('\n')}
+${_code}
+`
+
+        return _code
       } catch (error) {
         throw error
       }
@@ -110,7 +176,7 @@ function transformRequire(callExpressions: acorn.Node[][]) {
   const requires: RequireRecord[] = []
 
   for (const ancestors of callExpressions) {
-    // console.log(callExpression.map(n => n.type))
+    // console.log(ancestors.map(n => n.type))
     try {
       const firstNode = ancestors[0]
       const transformed: RequireRecord = {
@@ -155,6 +221,7 @@ function transformRequire(callExpressions: acorn.Node[][]) {
       // console.log(transformed)
       requires.push(transformed)
     } catch (error) {
+      console.error('\n[transformRequire]', error, '\n')
       throw error
     }
   }
@@ -265,6 +332,9 @@ export interface ImportRecord {
   require: string
 }
 
+/**
+ * @todo import 去重
+ */
 function transformImport(requires: RequireRecord[]) {
   const statements = requires.filter(
     req => req.Statement.CallExpression
@@ -279,113 +349,121 @@ function transformImport(requires: RequireRecord[]) {
   const imports: ImportRecord[] = []
 
   for (const statement of statements) {
-    const { VariableDeclarator: VD, CallExpression } = statement.Statement
-    const item: ImportRecord = {
-      node: CallExpression.node,
-      ancestors: CallExpression.ancestors,
-      require: CallExpression.require,
-    }
-
-    if (VD === null) {
-      // require('acorn')
-      item.importOnly = { code: `import "${CallExpression.require}"` }
-    } else if (VD.name) {
-      const property = CallExpression.property
-      if (property) {
-        if (property === 'default') {
-          // const acornDefault = require('acorn').default
-          item.importName = {
-            name: VD.name,
-            code: `import ${VD.name} from "${CallExpression.require}"`,
-          }
-        } else {
-          if (VD.name === property) {
-            // const parse = require('acorn').parse
-            item.importNames = {
-              names: [property],
-              code: `import { ${property} } from "${CallExpression.require}"`,
-            }
-          } else {
-            // const alias = require('acorn').parse
-            item.importName = {
-              name: { [property]: VD.name },
-              code: `import { ${property} as ${VD.name} } from "${CallExpression.require}"`,
-            }
-          }
-        }
-      } else {
-        // const acorn = require('acorn')
-        item.importName = {
-          name: { '*': VD.name },
-          code: `import * as ${VD.name} from "${CallExpression.require}"`,
-        }
-      }
-    } else if (VD.names) {
-      const property = CallExpression.property
-      if (property) {
-        if (property === 'default') {
-          // const { ancestor, simple } = require('acorn-walk').default
-          const moduleName = `_MODULE_default__${counter++}`
-          item.importDefaultDeconstruct = {
-            name: moduleName,
-            deconstruct: VD.names,
-            codes: [
-              `import ${moduleName} from "${CallExpression.require}"`,
-              `const { ${VD.names.join(', ')} } = ${moduleName}`,
-            ],
-          }
-        } else {
-          // const { ancestor, simple } = require('acorn-walk').other
-          const moduleName = `_MODULE_name__${counter++}` // 防止命名冲突
-          item.importDeconstruct = {
-            name: moduleName,
-            deconstruct: VD.names,
-            codes: [
-              `import { ${property} as ${moduleName} } from "${CallExpression.require}"`,
-              `const { ${VD.names.join(', ')} } = ${moduleName}`,
-            ],
-          }
-        }
-      } else {
-        // const { ancestor, simple } = require('acorn-walk')
-        item.importNames = {
-          names: VD.names,
-          code: `import { ${VD.names.join(', ')} } from "${CallExpression.require}"`,
-        }
-      }
-    }
-
-    // console.log(item)
-    imports.push(item)
-  }
-
-  for (const { ArrayExpression, ObjectExpression } of expressions) {
-    for (const arrOrObj of ArrayExpression || ObjectExpression) {
-      const { CallExpression } = arrOrObj
-      const expType = typeof (arrOrObj as any).Index === 'number' ? 'array' : 'object'
+    try {
+      const { VariableDeclarator: VD, CallExpression } = statement.Statement
       const item: ImportRecord = {
         node: CallExpression.node,
         ancestors: CallExpression.ancestors,
         require: CallExpression.require,
       }
 
-      if (CallExpression.property === 'default') {
-        const moduleName = `_MODULE_default___EXPRESSION_${expType}__${counter++}`
-        item.importDefaultExpression = {
-          name: moduleName,
-          code: `import ${moduleName} from "${CallExpression.require}"`,
+      if (VD === null) {
+        // require('acorn')
+        item.importOnly = { code: `import "${CallExpression.require}"` }
+      } else if (VD.name) {
+        const property = CallExpression.property
+        if (property) {
+          if (property === 'default') {
+            // const acornDefault = require('acorn').default
+            item.importName = {
+              name: VD.name,
+              code: `import ${VD.name} from "${CallExpression.require}"`,
+            }
+          } else {
+            if (VD.name === property) {
+              // const parse = require('acorn').parse
+              item.importNames = {
+                names: [property],
+                code: `import { ${property} } from "${CallExpression.require}"`,
+              }
+            } else {
+              // const alias = require('acorn').parse
+              item.importName = {
+                name: { [property]: VD.name },
+                code: `import { ${property} as ${VD.name} } from "${CallExpression.require}"`,
+              }
+            }
+          }
+        } else {
+          // const acorn = require('acorn')
+          item.importName = {
+            name: { '*': VD.name },
+            code: `import * as ${VD.name} from "${CallExpression.require}"`,
+          }
         }
-      } else {
-        // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
-        const moduleName = `_MODULE_name__EXPRESSION_${expType}__${counter++}`
-        item.importExpression = {
-          name: { '*': moduleName },
-          code: `import * as ${moduleName} from "${CallExpression.require}"`,
+      } else if (VD.names) {
+        const property = CallExpression.property
+        if (property) {
+          if (property === 'default') {
+            // const { ancestor, simple } = require('acorn-walk').default
+            const moduleName = `_MODULE_default__${counter++}`
+            item.importDefaultDeconstruct = {
+              name: moduleName,
+              deconstruct: VD.names,
+              codes: [
+                `import ${moduleName} from "${CallExpression.require}"`,
+                `const { ${VD.names.join(', ')} } = ${moduleName}`,
+              ],
+            }
+          } else {
+            // const { ancestor, simple } = require('acorn-walk').other
+            const moduleName = `_MODULE_name__${counter++}` // 防止命名冲突
+            item.importDeconstruct = {
+              name: moduleName,
+              deconstruct: VD.names,
+              codes: [
+                `import { ${property} as ${moduleName} } from "${CallExpression.require}"`,
+                `const { ${VD.names.join(', ')} } = ${moduleName}`,
+              ],
+            }
+          }
+        } else {
+          // const { ancestor, simple } = require('acorn-walk')
+          item.importNames = {
+            names: VD.names,
+            code: `import { ${VD.names.join(', ')} } from "${CallExpression.require}"`,
+          }
         }
       }
 
       // console.log(item)
       imports.push(item)
+    } catch (error) {
+      console.error('\n[transformImport.statements]', error, '\n')
+    }
+  }
+
+  for (const { ArrayExpression, ObjectExpression } of expressions) {
+    for (const arrOrObj of ArrayExpression || ObjectExpression) {
+      try {
+        const { CallExpression } = arrOrObj
+        const expType = typeof (arrOrObj as any).Index === 'number' ? 'array' : 'object'
+        const item: ImportRecord = {
+          node: CallExpression.node,
+          ancestors: CallExpression.ancestors,
+          require: CallExpression.require,
+        }
+
+        if (CallExpression.property === 'default') {
+          const moduleName = `_MODULE_default___EXPRESSION_${expType}__${counter++}`
+          item.importDefaultExpression = {
+            name: moduleName,
+            code: `import ${moduleName} from "${CallExpression.require}"`,
+          }
+        } else {
+          // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
+          const moduleName = `_MODULE_name__EXPRESSION_${expType}__${counter++}`
+          item.importExpression = {
+            name: { '*': moduleName },
+            code: `import * as ${moduleName} from "${CallExpression.require}"`,
+          }
+        }
+
+        // console.log(item)
+        imports.push(item)
+      } catch (error) {
+        console.error('\n[transformImport.expressions]', error, '\n')
+      }
     }
   }
 
@@ -469,7 +547,7 @@ function extractCjsEsm(code: string, imports: ImportRecord[]) {
       }
     }
 
-    console.log(item)
+    // console.log(item)
     cjsEsmList.push(item)
   }
 

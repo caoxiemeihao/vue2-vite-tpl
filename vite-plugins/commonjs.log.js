@@ -453,3 +453,55 @@ const home = require('@/views/home').home
 
 // ------------------------------------------------
 
+const parse = require('acorn').parse;
+const { ancestor, simple } = require('acorn-walk')
+const acorn = require('acorn');
+const home = require('@/views/home').home
+
+require('vite')
+
+const dict = {
+  news: require('@/views/news').default,
+  home: require('@/views/home'),
+}
+
+const arr = [
+  require('@/views/news').news,
+  require('@/views/home'),
+]
+
+module.exports = { dict, arr };
+
+//----------------------------------
+
+/** CommonJs statements */
+import { parse } from "acorn"
+import { ancestor, simple } from "acorn-walk"
+import * as acorn from "acorn"
+import { home } from "@/views/home"
+import "vite"
+
+/** CommonJs expressions */
+import _MODULE_default___EXPRESSION_object__0 from "@/views/news"
+import * as _MODULE_name__EXPRESSION_object__1 from "@/views/home"
+import * as _MODULE_name__EXPRESSION_array__2 from "@/views/news"
+import * as _MODULE_name__EXPRESSION_array__3 from "@/views/home"
+
+/** CommonJs deconstructs */
+
+
+
+const dict = {
+  news: _MODULE_default___EXPRESSION_object__0,
+  home: _MODULE_name__EXPRESSION_object__1,
+}
+
+const arr = [
+  _MODULE_name__EXPRESSION_array__2.news,
+  _MODULE_name__EXPRESSION_array__3,
+]
+
+module.exports = { dict, arr };
+
+// ------------------------------------------------
+
