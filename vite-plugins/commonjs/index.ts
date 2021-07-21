@@ -1,5 +1,6 @@
 import path from 'path'
-import { Plugin, UserConfig } from 'vite'
+import fs from 'fs'
+import { AliasOptions, Plugin, UserConfig } from 'vite'
 import acorn from 'acorn'
 import walk from 'acorn-walk'
 import {
@@ -16,9 +17,10 @@ function errorLog(TAG: string, error: Error) {
   console.log()
 }
 
+const extensions = DEFAULT_EXTENSIONS
+const refConifg: { current: UserConfig } = { current: null }
+
 export function commonjs(options?: Record<string, unknown>): Plugin {
-  const extensions = DEFAULT_EXTENSIONS
-  const refConifg: { current: UserConfig } = { current: null }
 
   return {
     name: '草鞋没号:commonjs',
@@ -368,10 +370,11 @@ function transformImport(requires: RequireRecord[]) {
         require: CallExpression.require,
       }
 
+      const requireFilename = resolveFilename(refConifg.current.resolve.alias, CallExpression.require)
 
       if (VD === null) {
         // require('acorn')
-        item.importOnly = { code: `import "${CallExpression.require}"` }
+        item.importOnly = { code: `import "${requireFilename}"` }
       } else if (VD.name) {
         const property = CallExpression.property
         if (property) {
@@ -379,20 +382,20 @@ function transformImport(requires: RequireRecord[]) {
             // const acornDefault = require('acorn').default
             item.importName = {
               name: VD.name,
-              code: `import ${VD.name} from "${CallExpression.require}"`,
+              code: `import ${VD.name} from "${requireFilename}"`,
             }
           } else {
             if (VD.name === property) {
               // const parse = require('acorn').parse
               item.importNames = {
                 names: [property],
-                code: `import { ${property} } from "${CallExpression.require}"`,
+                code: `import { ${property} } from "${requireFilename}"`,
               }
             } else {
               // const alias = require('acorn').parse
               item.importName = {
                 name: { [property]: VD.name },
-                code: `import { ${property} as ${VD.name} } from "${CallExpression.require}"`,
+                code: `import { ${property} as ${VD.name} } from "${requireFilename}"`,
               }
             }
           }
@@ -400,7 +403,7 @@ function transformImport(requires: RequireRecord[]) {
           // const acorn = require('acorn')
           item.importName = {
             name: { '*': VD.name },
-            code: `import * as ${VD.name} from "${CallExpression.require}"`,
+            code: `import * as ${VD.name} from "${requireFilename}"`,
           }
         }
       } else if (VD.names) {
@@ -413,7 +416,7 @@ function transformImport(requires: RequireRecord[]) {
               name: moduleName,
               deconstruct: VD.names,
               codes: [
-                `import ${moduleName} from "${CallExpression.require}"`,
+                `import ${moduleName} from "${requireFilename}"`,
                 `const { ${VD.names.join(', ')} } = ${moduleName}`,
               ],
             }
@@ -424,7 +427,7 @@ function transformImport(requires: RequireRecord[]) {
               name: moduleName,
               deconstruct: VD.names,
               codes: [
-                `import { ${property} as ${moduleName} } from "${CallExpression.require}"`,
+                `import { ${property} as ${moduleName} } from "${requireFilename}"`,
                 `const { ${VD.names.join(', ')} } = ${moduleName}`,
               ],
             }
@@ -433,7 +436,7 @@ function transformImport(requires: RequireRecord[]) {
           // const { ancestor, simple } = require('acorn-walk')
           item.importNames = {
             names: VD.names,
-            code: `import { ${VD.names.join(', ')} } from "${CallExpression.require}"`,
+            code: `import { ${VD.names.join(', ')} } from "${requireFilename}"`,
           }
         }
       }
@@ -457,18 +460,20 @@ function transformImport(requires: RequireRecord[]) {
         require: CallExpression.require,
       }
 
+      const requireFilename = resolveFilename(refConifg.current.resolve.alias, CallExpression.require)
+
       if (CallExpression.property === 'default') {
         const moduleName = `_MODULE_default___EXPRESSION_${expType}__${counter++}`
         item.importDefaultExpression = {
           name: moduleName,
-          code: `import ${moduleName} from "${CallExpression.require}"`,
+          code: `import ${moduleName} from "${requireFilename}"`,
         }
       } else {
         // CallExpression.property === other 的情况当做 * as moduleName 处理，省的命名冲突
         const moduleName = `_MODULE_name__EXPRESSION_${expType}__${counter++}`
         item.importExpression = {
           name: { '*': moduleName },
-          code: `import * as ${moduleName} from "${CallExpression.require}"`,
+          code: `import * as ${moduleName} from "${requireFilename}"`,
         }
       }
 
@@ -565,6 +570,27 @@ function extractCjsEsm(code: string, imports: ImportRecord[]) {
   }
 
   return cjsEsmList
+}
+
+// ------------------------------
+
+/** @todo Array typed alias options */
+function resolveFilename(alias: AliasOptions, filepath: string) {
+  if (Array.isArray(alias)) { return filepath }
+
+  let aliasPath: string
+  for (const [a, p] of Object.entries(alias)) {
+    if (filepath.startsWith(`${a}/`)) {
+      aliasPath = filepath.replace(a, p)
+      break
+    }
+  }
+
+  if (!aliasPath) { return filepath }
+
+  const extension = detectFileExist(aliasPath)
+
+  return extension ? filepath + extension : filepath
 }
 
 // ------------------------------
