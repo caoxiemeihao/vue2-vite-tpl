@@ -17,7 +17,8 @@ function errorLog(TAG: string, error: Error) {
   console.log()
 }
 
-const extensions = DEFAULT_EXTENSIONS
+/** @todo .ts .tsx process */
+const extensions = DEFAULT_EXTENSIONS.filter(ext => !['.ts', '.tsx'].includes(ext))
 const refConifg: { current: UserConfig } = { current: null }
 
 export function commonjs(options?: Record<string, unknown>): Plugin {
