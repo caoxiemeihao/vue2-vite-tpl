@@ -32,7 +32,7 @@ export function commonjs(options?: Record<string, unknown>): Plugin {
     transform(code, id) {
       if (/node_modules/.test(id)) return
       if (!extensions.some(ext => id.endsWith(ext))) return
-      if (parsePathQuery(id).type === 'template') return
+      if (parsePathQuery(id).query) return
       if (!/(require|exports)/g.test(code)) return
 
       // if (!id.endsWith('router.js')) return

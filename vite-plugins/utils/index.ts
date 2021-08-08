@@ -15,14 +15,16 @@ export const DEFAULT_EXTENSIONS = [
 /**
  * { vue: true, type: 'template', 'lang.js': true }
  * { vue: true, type: 'style', index: '0', 'lang.less': true }
- * { vue: true, type: 'style', index: '0', scoped: 'true', 'lang.css': tru }
+ * { vue: true, type: 'style', index: '0', scoped: 'true', 'lang.css': true }
  */
 export function parsePathQuery(querystring: string): Record<string, string | boolean> {
-  const [, query] = querystring.split('?')
+  const [url, query] = querystring.split('?')
   try {
-    return [...new URLSearchParams(query).entries()].reduce((acc, [k, v]) => (
+    const dict = [...new URLSearchParams(query).entries()].reduce((acc, [k, v]) => (
       { ...acc, [k]: v === '' ? true : v }
-    ), {})
+    ), { url, query })
+    delete (dict as Record<string, unknown>).index
+    return dict
   } catch (error) {
     return {
       _error: error,
